@@ -1,0 +1,1 @@
+perl -E '$max = 0; $cur = 0; sub done { say "Elf " . ++$i . ": " . $cur; $max = $max > $cur ? $max : $cur; $cur = 0 } while (<>) { if (/^$/) { done() } else { $cur += $_ } } done(); say "Max: $max";' $1
