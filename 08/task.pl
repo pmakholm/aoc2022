@@ -4,6 +4,7 @@ use v5.34;
 use experimental 'signatures';
 
 use List::Util qw(any all reduce);
+use List::MoreUtils qw(before_incl);
 
 sub visible($x,$y,$grid, $x_max, $y_max) {
     my $target = $grid->[$x][$y];
@@ -16,29 +17,22 @@ sub visible($x,$y,$grid, $x_max, $y_max) {
     return any { $_ } $left, $right, $top, $bottom;
 }
 
-sub lookout($target, $heigths) {
-    my $i = 0;
-
-    for (@$heigths) {
-        if ($_ < $target) {
-            $i++
-        } else {
-            return ++$i;
-        }
-    }
-
-    return $i;
-}
-
 sub scenic($x, $y, $grid, $x_max, $y_max) {
     my $target = $grid->[$x][$y];
 
-    my $left = [ reverse map { $grid->[$_][$y] } 0..$x-1 ];
-    my $right = [ map { $grid->[$_][$y] } $x+1..$x_max ];
-    my $top = [ reverse map { $grid->[$x][$_] } 0 .. $y-1 ];
-    my $bottom = [ map { $grid->[$x][$_] } $y+1 .. $y_max ];
+    my @left = reverse map { $grid->[$_][$y] } 0..$x-1;
+    my @right = map { $grid->[$_][$y] } $x+1..$x_max;
+    my @top = reverse map { $grid->[$x][$_] } 0 .. $y-1;
+    my @bottom = map { $grid->[$x][$_] } $y+1 .. $y_max;
 
-    return reduce { $a * $b } map { lookout($target, $_) } $left, $right, $top, $bottom;
+    # XXX before_incl has an odd behavior in scalar context, so I need
+    # to explicitly force it to be evaluated in list context before coercing
+    # it to scalar context. (Yeah, length of a list is spelled 'scalar')
+    #
+    # This odd behavior has been rapported as https://rt.cpan.org/Public/Bug/Display.html?id=145515
+
+    return reduce { $a * $b }
+           map { scalar (()= before_incl { ;$_ >= $target } @$_) } \@left, \@right, \@top, \@bottom;
 }
 
 my $grid;
