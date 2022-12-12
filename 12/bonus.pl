@@ -21,26 +21,30 @@ sub Q::new($class) {
     return bless {}, $class;
 }
 
+sub Q::priority($this, $item) {
+    return $item->{steps} + $item->{distance};
+}
+
 sub Q::enqueue($this, $item) {
-    push @{ $this->{ $item->{steps} } }, $item;
+    push @{ $this->{ $this->priority($item) } }, $item;
 }
 
 sub Q::update($this, $item, $new) {
-    my $old = $item->{steps};
+    my $old = $this->priority($item);
 
     my $index = first_index { $_ == $item } @{ $this->{$old} };
     splice @{ $this->{$old} }, $index, 1;
 
     $item->{steps} = $new;
 
-    push @{ $this->{$new} }, $item;
+    push @{ $this->{ $this->priority($item) } }, $item;
 }
 
 sub Q::dequeue($this) {
     # Pop from priority queue
     my $priority = 0;
     while (1) {
-        last if $priority > $INT_MAX;
+        last if $priority > $INT_MAX * 2;
         unless (exists $this->{$priority}) {
             $priority++;
             next;
@@ -58,20 +62,25 @@ sub Q::dequeue($this) {
 #
 ########################################################################
 
-sub new($x,$y,$mark, $start) {
+sub new($x,$y,$mark, $start, $store) {
     my $heigth = ord($mark);
 
     # Special casing start and end
     $heigth = ord('a') if $mark eq 'S';
     $heigth = ord('z') if $mark eq 'E';
     
-    return {
+    my $node = {
         pos => [ $x, $y ],
         neighbors => [],
         heigth => $heigth,
         steps => $mark eq $start ? 0 : $INT_MAX,
+        distance => $INT_MAX,
         end => $mark eq 'E',
-    }
+    };
+
+    $store->($node) if $node->{end};
+
+    return $node;
 }
 
 sub parse($start, @input) {
@@ -80,9 +89,11 @@ sub parse($start, @input) {
     my @grid;
     my $x = 0;
 
+    my $end;
+
     for (@input) {
         my $y = 0;
-        my @line = map { new($x, $y++, $_, $start) } split //;
+        my @line = map { new($x, $y++, $_, $start, sub($item) { $end = $item }) } split //;
 
         push @grid, \@line;
         $x++;
@@ -91,6 +102,7 @@ sub parse($start, @input) {
     # Create edges for each possible step, and add it to priority queue
     my $max_x = $#grid;
     my $max_y = $#{ $grid[0] };
+
     for my $item (map {@$_ } @grid) {
         my $x = $item->{pos}[0];
         my $y = $item->{pos}[1];
@@ -108,6 +120,10 @@ sub parse($start, @input) {
 
             push @{ $item->{neighbors} }, $neighbor;
         }
+
+        $item->{distance} = 
+            abs( $item->{pos}->[0] - $end->{pos}->[0] ) + 
+            abs( $item->{pos}->[1] - $end->{pos}->[1] );
 
         $queue->enqueue($item);
     }
