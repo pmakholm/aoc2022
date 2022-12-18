@@ -67,6 +67,9 @@ my $heigth = 0;
 
 my $corner = [ 2, $heigth + 3 ];
 
+my @seen;
+my %seen;
+
 while (1) {
     my $dir = substr($directions, $step % length($directions), 1);
     #say $dir;
@@ -78,6 +81,10 @@ while (1) {
         $corner = step($corner, 'v');
     } else {
         freeze($corner, $shape, $grid);       
+        
+        if ($shape % scalar(@shapes) == 0) {
+            #say "$shape frozen at direction ", $step % length($directions), " at heigth $heigth";
+        }
 
         my $top = $corner->[1] + $heigth[$shape % scalar(@shapes)];
         $heigth = $heigth > $top ? $heigth : $top;
@@ -86,11 +93,18 @@ while (1) {
         $corner = [ 2, $heigth + 3 ];
 
         say "Task 1: $heigth" if $shape == 2022;
+        say "Input for task 2: $heigth" if $shape == 3600;
         last if $shape == 1_000_000_000_000;
     }
 
     $step++
 }
 
-say "Task 2: $heigth";
-
+# My original subimission of task 2 involved some pen and paper work.
+#
+#   Looking at the index into directions each '-' shaped lands at, we see a
+#   1700 shapes cycle starting at shape 1695. Each cycle have a heigth of 2654 rows.
+#
+#   So, the result is the heigth(at shape 1695) plus int(10^12/1700)*2654 + height(205 shapes of a cycle)
+#
+#   At some time I might revisit to calculate this programatically
